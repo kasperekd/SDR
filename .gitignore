@@ -4,3 +4,5 @@
 fft
 myenv
 data
+!lab_10/data
+*.bin
