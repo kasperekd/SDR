@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -47,7 +48,13 @@ configurations = [
 ]
 
 # read
-signal = read_signal('4ghz_10mhz.txt')
+parser = argparse.ArgumentParser()
+parser.add_argument('file_path', type=str)
+parser.add_argument('--max_lines', type=int, default=None)
+args = parser.parse_args()
+
+signal = read_signal(args.file_path)
+# signal = read_signal('4ghz_10mhz.txt')
 # signal = read_signal('test(1).txt')
 # signal = read_signal('qpsk_signal.txt')
 # signal = read_signal('single_adalm_rx.txt')
