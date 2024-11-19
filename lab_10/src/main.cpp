@@ -6,9 +6,16 @@
 #include "my_init.h"
 #include "my_utils.h"
 
-int main() {
+int main(int argc, char *argv[]) {
+    auto args = parse_args(argc, argv);
+
+    std::string config_path = "config.cfg";  // default
+    if (args.find("c") != args.end()) {
+        config_path = args["c"];
+    }
+
     Config config;
-    if (!load_config("config.cfg", config)) {  // TODO Получать через параметры
+    if (!load_config(config_path, config)) {
         std::cerr << "Failed to load configuration" << std::endl;
         return 1;
     }

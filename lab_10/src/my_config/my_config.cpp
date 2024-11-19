@@ -1,6 +1,5 @@
 #include "my_config.h"
 
-// Утилита для удаления пробелов с краев строки
 static std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t");
     if (first == std::string::npos) return "";
@@ -8,7 +7,6 @@ static std::string trim(const std::string& str) {
     return str.substr(first, (last - first + 1));
 }
 
-// Чтение конфигурации из файла
 bool load_config(const std::string& file_path, Config& config) {
     std::ifstream file(file_path);
     if (!file.is_open()) {
@@ -18,13 +16,13 @@ bool load_config(const std::string& file_path, Config& config) {
 
     std::string line;
     while (std::getline(file, line)) {
-        // Пропускаем пустые строки и комментарии
+        // пустые строки и комментарии
         line = trim(line);
         if (line.empty() || line[0] == '#') {
             continue;
         }
 
-        // Разделяем строку на ключ и значение
+        // ключ / значение
         size_t eq_pos = line.find('=');
         if (eq_pos == std::string::npos) {
             std::cerr << "Invalid line in config file: " << line << std::endl;
@@ -33,7 +31,6 @@ bool load_config(const std::string& file_path, Config& config) {
         std::string key = trim(line.substr(0, eq_pos));
         std::string value = trim(line.substr(eq_pos + 1));
 
-        // Сопоставляем ключи с полями структуры Config
         if (key == "device_address") {
             config.device_address = value;
         } else if (key == "tx_bandwidth_hz") {
