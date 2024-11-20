@@ -5,4 +5,5 @@ fft
 myenv
 data
 !lab_10/data
+!TRX/data
 *.bin
