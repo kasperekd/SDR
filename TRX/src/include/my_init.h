@@ -29,10 +29,14 @@ struct PlutoDevices {
     struct iio_buffer* rxbuf;
     struct iio_channels_mask* txmask;
     struct iio_channels_mask* rxmask;
+    struct iio_stream* rxstream;
+    struct iio_stream* txstream;
+    size_t rx_sample_sz, tx_sample_sz;
 };
 
 bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,
-                      const StreamConfig& rxcfg, PlutoDevices& devices);
+                      const StreamConfig& rxcfg, PlutoDevices& devices,
+                      size_t buffer_size);
 void cleanup_adalm_pluto(PlutoDevices& devices);
 
 #endif  // MY_INIT_H

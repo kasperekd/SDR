@@ -7,7 +7,7 @@ def text_to_bit_sequence(text):
     
     for char in text:
         ascii_value = ord(char)
-        bits = format(ascii_value, '07b')
+        bits = format(ascii_value, '08b')
         bit_sequence.extend(int(bit) for bit in bits)
     
     bit_sequence_array = np.array(bit_sequence)
@@ -46,7 +46,7 @@ def convolve_with_one(symbols, n):
 N = 10
 # num_bits = 20
 # bit_sequence = np.random.randint(0, 2, num_bits)
-text = "text"
+text = "text!"
 # text = "?? text to tx !!"
 bit_sequence, num_bits = text_to_bit_sequence(text)
 
@@ -54,7 +54,7 @@ qpsk_symbols = bits_to_qpsk(bit_sequence)
 qpsk_symbols_app = oversampling(qpsk_symbols, N)
 qpsk_symbols_convolve = convolve_with_one(qpsk_symbols_app, N)
 
-qpsk_symbols_convolve *= 2**9
+# qpsk_symbols_convolve *= 2**9
 
 real_part = (qpsk_symbols_convolve.real).astype(np.int16)
 imag_part = (qpsk_symbols_convolve.imag).astype(np.int16) 
@@ -64,6 +64,7 @@ combined[0::2] = real_part
 combined[1::2] = imag_part
 
 print(combined)
+print(real_part.size)
 
 with open('qpsk_signal.bin', 'wb') as f:
     combined.tofile(f)

@@ -46,6 +46,10 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
         free(combined);
         return;
     }
+    for (size_t i = 0; i < *num_samples; i++) {
+        (*tx_i)[i] = 0;
+        (*tx_q)[i] = 0;
+    }
 
     for (size_t i = 0; i < *num_samples; i++) {
         (*tx_i)[i] = combined[2 * i];
@@ -53,9 +57,9 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
     }
 
     free(combined);
-    for (size_t i = 0; i < *num_samples; i++) {
-        printf("Sample %zu: %d + %di\n", i, (*tx_i)[i], (*tx_q)[i]);
-    }
+    // for (size_t i = 0; i < *num_samples; i++) {
+    //     printf("Sample %zu: %d + %di\n", i, (*tx_i)[i], (*tx_q)[i]);
+    // }
 }
 
 std::unordered_map<std::string, std::string> parse_args(int argc,
