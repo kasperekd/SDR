@@ -254,7 +254,7 @@ int main() {
 
         counter++;
 
-        if (counter >= 100) {
+        if (counter >= 10) {
             break;
         }
     }

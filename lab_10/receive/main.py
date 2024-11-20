@@ -10,6 +10,7 @@ def plot_signal(real_part, imag_part):
     # real
     plt.subplot(2, 1, 1)
     plt.plot(time_indices, real_part, color='blue', label='Real Part')
+    # plt.plot(time_indices, imag_part, color='red', label='Imaginary Part')
     plt.title('Real Part')
     plt.xlabel('Index')
     plt.ylabel('Amplitude')
@@ -78,9 +79,10 @@ args = parser.parse_args()
 
 N = 10
 signal = read_signal(args.file_path)
-
-signal /= 2**9
-
+r = read_signal(args.file_path)
+# signal = r[1:300]
+# signal /= 2**9
+# plot_signal(signal.real, signal.imag)
 filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
 

@@ -48,13 +48,15 @@ int main(int argc, char *argv[]) {
     int16_t *tx_i = NULL;
     int16_t *tx_q = NULL;
     size_t num_samples = 0;
-    read_qpsk_signal("qpsk_signal.bin", &tx_i, &tx_q, &num_samples);
-
+    // read_qpsk_signal("qpsk_signal.bin", &tx_i, &tx_q, &num_samples);
+    read_qpsk_signal("/home/kasperekd/SDR/lab_10/generate/qpsk_signal.bin", &tx_i, &tx_q, &num_samples);
+    
     int32_t counter = 0;
     std::vector<int16_t> rx_data_i = {0};
     std::vector<int16_t> rx_data_q = {0};
 
     while (true) {
+        size_t _counter = 0;
         const struct iio_block *txblock = iio_stream_get_next_block(txstream);
         const struct iio_block *rxblock = iio_stream_get_next_block(rxstream);
 
@@ -64,8 +66,24 @@ int main(int argc, char *argv[]) {
         for (p_dat = static_cast<int16_t *>(
                  iio_block_first(txblock, devices.tx0_i));
              p_dat < p_end; p_dat += p_inc / sizeof(*p_dat)) {
-            p_dat[0] = tx_i[counter % num_samples];  // I
-            p_dat[1] = tx_q[counter % num_samples];  // Q
+                if (_counter < num_samples)
+                {
+                    p_dat[0] = tx_i[_counter] / 16;  // I
+                    p_dat[1] = tx_q[_counter] / 16;  // Q
+                    _counter++;
+                }
+                else
+                {
+                    _counter = 0;
+                    // break;
+                    // p_dat[0] = 0; // I
+                    // p_dat[1] = 0; // Q
+                }
+                
+                // _counter++;
+
+            // p_dat[0] = tx_i[counter % num_samples];  // I
+            // p_dat[1] = tx_q[counter % num_samples];  // Q
             // p_dat[0] = 0; // I
             // p_dat[1] = 0; // Q
         }
@@ -96,8 +114,6 @@ int main(int argc, char *argv[]) {
     free(tx_i);
     free(tx_q);
     outfile.close();
-    cleanup_adalm_pluto(devices);
-
     // TODO Вынести в функцию очистки
     if (rxstream) {
         iio_stream_destroy(rxstream);
@@ -105,6 +121,8 @@ int main(int argc, char *argv[]) {
     if (txstream) {
         iio_stream_destroy(txstream);
     }
+    cleanup_adalm_pluto(devices);
+
 
     return 0;
 }

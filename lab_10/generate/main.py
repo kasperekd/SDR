@@ -43,7 +43,7 @@ def convolve_with_one(symbols, n):
     result = np.convolve(symbols, filter_ones, mode='full')
     return result
 
-N = 10 
+N = 10
 # num_bits = 20
 # bit_sequence = np.random.randint(0, 2, num_bits)
 text = "text"
