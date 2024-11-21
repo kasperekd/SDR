@@ -154,6 +154,6 @@ signal = convolve_with_filter(signal, filter_ones)
 # filter_coefficients = raised_cosine_filter(beta, N, num_taps)
 # signal = convolve_with_filter(signal, filter_coefficients)
 
-# signal = extract_every_nth(signal, N, 3) # нужно менять этот 0 в пределах от 0 до N
+# signal = extract_every_nth(signal, N, 0) # нужно менять этот 0 в пределах от 0 до N
 # plot_signal(signal.real, signal.imag)
 plot_signal_interactive(signal, N)

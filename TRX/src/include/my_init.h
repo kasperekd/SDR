@@ -16,6 +16,8 @@ struct StreamConfig {
     const char* rfport;
 };
 
+const char* gain_mode;
+
 struct PlutoDevices {
     struct iio_context* ctx;
     struct iio_device* tx_dev;
@@ -36,7 +38,7 @@ struct PlutoDevices {
 
 bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,
                       const StreamConfig& rxcfg, PlutoDevices& devices,
-                      size_t buffer_size);
+                      size_t buffer_size, const std::string& gain_mode);
 void cleanup_adalm_pluto(PlutoDevices& devices);
 
 #endif  // MY_INIT_H

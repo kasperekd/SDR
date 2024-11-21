@@ -1,11 +1,11 @@
 #include "my_utils.h"
 
-void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
+bool read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
                       size_t *num_samples) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
         perror("Ошибка открытия файла");
-        return;
+        return false;
     }
 
     fseek(file, 0, SEEK_END);
@@ -16,7 +16,7 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
         fprintf(stderr,
                 "Ошибка: размер файла не кратен размеру комплексного числа\n");
         fclose(file);
-        return;
+        return false;
     }
 
     *num_samples = file_size / (2 * sizeof(int16_t));
@@ -25,7 +25,7 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
     if (combined == NULL) {
         fprintf(stderr, "Ошибка выделения памяти\n");
         fclose(file);
-        return;
+        return false;
     }
 
     size_t read_count =
@@ -34,7 +34,7 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
         fprintf(stderr, "Ошибка чтения данных из файла\n");
         free(combined);
         fclose(file);
-        return;
+        return false;
     }
 
     fclose(file);
@@ -44,7 +44,7 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
     if (*tx_i == NULL || *tx_q == NULL) {
         fprintf(stderr, "Ошибка выделения памяти\n");
         free(combined);
-        return;
+        return false;
     }
     for (size_t i = 0; i < *num_samples; i++) {
         (*tx_i)[i] = 0;
@@ -60,6 +60,7 @@ void read_qpsk_signal(const char *filename, int16_t **tx_i, int16_t **tx_q,
     // for (size_t i = 0; i < *num_samples; i++) {
     //     printf("Sample %zu: %d + %di\n", i, (*tx_i)[i], (*tx_q)[i]);
     // }
+    return true;
 }
 
 std::unordered_map<std::string, std::string> parse_args(int argc,

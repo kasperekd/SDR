@@ -12,7 +12,7 @@
 
 bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,
                       const StreamConfig& rxcfg, PlutoDevices& devices,
-                      size_t buffer_size) {
+                      size_t buffer_size, const std::string& gain_mode) {
     try {
         devices = {nullptr};
 
@@ -67,7 +67,7 @@ bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,
             iio_channel_find_attr(rx_chn, "gain_control_mode");
         IIO_ENSURE(rx_gain_attr != nullptr,
                    "Failed to find RX gain control attribute");
-        iio_attr_write_string(rx_gain_attr, "slow_attack");
+        iio_attr_write_string(rx_gain_attr, gain_mode.c_str());
 
         std::cout << "* Finding channels\n";
         devices.tx0_i =

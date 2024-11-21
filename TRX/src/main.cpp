@@ -16,13 +16,15 @@ std::string binar_path = "qpsk_signal.bin";
 bool enable_rx = true;
 bool enable_tx = true;
 std::atomic<bool> keep_running(true);
+// FIXME: Не может работать долго ?? ERROR: iio:device3: Unable to dequeue
+// block: Connection timed out (110)
 size_t tx_iters = 0;  // 0 - inf
 size_t rx_iters = 0;
 
 void signal_handler(int signal) {
     if (signal == SIGINT) {
         keep_running = false;
-        std::cout << "Кeceived SIGINT" << std::endl;
+        std::cout << "Received SIGINT" << std::endl;
     }
 }
 
@@ -73,8 +75,12 @@ void transmit(PlutoDevices &devices, const int16_t *tx_i, const int16_t *tx_q,
                  iio_block_first(txblock, devices.tx0_i));
              p_dat < p_end; p_dat += p_inc / sizeof(*p_dat)) {
             if (_counter < num_samples) {
-                p_dat[0] = tx_i[_counter] * 512;  // I
-                p_dat[1] = tx_q[_counter] * 512;  // Q
+                // std::cout << tx_i[_counter] << " " << tx_q[_counter]
+                //           << std::endl;
+                p_dat[0] = tx_i[_counter];  // I
+                p_dat[1] = tx_q[_counter];  // Q
+                // p_dat[0] = tx_i[_counter] * 0;  // I
+                // p_dat[1] = tx_q[_counter] * 0;  // Q
                 _counter++;
             } else {
                 _counter = 0;
@@ -131,7 +137,8 @@ int main(int argc, char *argv[]) {
 
     PlutoDevices devices;
     if (!init_adalm_pluto(config.device_address, config.txcfg, config.rxcfg,
-                          devices, config.buffer_size)) {
+                          devices, config.buffer_size,
+                          config.gain_mode.c_str())) {
         std::cerr << "Failed to initialize ADALM-Pluto" << std::endl;
         return 1;
     }
@@ -140,7 +147,22 @@ int main(int argc, char *argv[]) {
     int16_t *tx_i = NULL;
     int16_t *tx_q = NULL;
     size_t num_samples = 0;
-    read_qpsk_signal(binar_path.c_str(), &tx_i, &tx_q, &num_samples);
+
+    if (!read_qpsk_signal(binar_path.c_str(), &tx_i, &tx_q, &num_samples)) {
+        std::cerr << "Failed read - " << binar_path << std::endl;
+        return 1;
+    }
+    // upscale
+    for (size_t i = 0; i < num_samples; i++) {
+        // tx_i[i] *= 512;
+        // tx_q[i] *= 512;
+        // tx_i[i] *= 32;
+        // tx_q[i] *= 32;
+        tx_i[i] *= 2048;
+        tx_q[i] *= 2048;
+        // tx_i[i] = 31999;
+        // tx_q[i] = 31999;
+    }
 
     std::ofstream outfile("adalm_rx.txt", std::ios::out);
 

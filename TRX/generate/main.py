@@ -2,6 +2,87 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import firwin, lfilter
 
+def plot_cross_correlation(x_fixed, x_data):
+    # Длина фиксированной последовательности
+    n_fixed = len(x_fixed)
+    n_data = len(x_data)
+    
+    # Массив для хранения корреляций
+    correlations = []
+    
+    # Вычисляем корреляцию для сдвигов от 0 до n_data - n_fixed
+    for shift in range(n_data - n_fixed + 1):
+        # Берем срез данных с учетом сдвига
+        x_shifted = x_data[shift:shift + n_fixed]
+        
+        # Вычисляем корреляцию (скалярное произведение)
+        correlation = np.dot(x_fixed, x_shifted)
+        correlations.append(correlation)
+    
+    # Построение графика
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(n_data - n_fixed + 1), correlations, marker='o')
+    plt.title('Корреляция фиксированной последовательности с данными')
+    plt.xlabel('Сдвиг')
+    plt.ylabel('Корреляция')
+    plt.grid()
+    plt.show()
+
+
+def plot_autocorrelation(data):
+    n = len(data)
+    mean = np.mean(data)
+    var = np.var(data)
+    
+    autocorr = np.correlate(data - mean, data - mean, mode='full')[-n:]
+    autocorr /= (var * np.arange(n, 0, -1))  # Нормируем
+
+    plt.figure(figsize=(10, 5))
+    plt.stem(autocorr)
+    plt.title('Автокорреляция')
+    plt.xlabel('Сдвиг')
+    plt.ylabel('Автокорреляция')
+    plt.grid()
+    plt.show()
+
+def plot_signal(real_part, imag_part):
+    time_indices = range(len(real_part))
+
+    plt.figure(figsize=(12, 6))
+
+    # real
+    plt.subplot(2, 1, 1)
+    plt.plot(time_indices, real_part, color='blue', label='Real Part')
+    # plt.scatter(time_indices, real_part, s=9)
+    # plt.plot(time_indices, imag_part, color='red', label='Imaginary Part')
+    plt.title('Real Part')
+    plt.xlabel('Index')
+    plt.ylabel('Amplitude')
+    plt.grid(True)
+    plt.axhline(0, color='black', linewidth=0.5, ls='--')
+    plt.legend()
+
+    # img
+    plt.subplot(2, 1, 2)
+    plt.plot(time_indices, imag_part, color='red', label='Imaginary Part')
+    plt.title('Imaginary Part')
+    plt.xlabel('Index')
+    plt.ylabel('Amplitude')
+    plt.grid(True)
+    plt.axhline(0, color='black', linewidth=0.5, ls='--')
+    plt.legend()
+
+    # QPSK
+    plt.figure()
+    plt.scatter(real_part, imag_part, s=9)
+    plt.xlabel('I')
+    plt.ylabel('Q')
+    plt.grid()
+    plt.axis('equal')
+
+    plt.tight_layout()
+    plt.show()
+
 def text_to_bit_sequence(text):
     bit_sequence = []
     
@@ -37,31 +118,45 @@ def oversampling(symbols, n):
     return np.array(new_symbols, dtype=np.complex128)
 
 def convolve_with_one(symbols, n):
-    # filter_ones = np.array([1 + 1j] * n, dtype=np.complex128)
     filter_ones = np.ones(n)
-    # filter_ones = np.linspace(1, 0, n)
     result = np.convolve(symbols, filter_ones, mode='full')
     return result
 
+# x_ = np.array([1, 1, 1, -1, -1, -1, 1, -1, -1, 1, -1], dtype=np.int16)
+x_ = np.array([1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0], dtype=np.int16)
+
 N = 10
-# num_bits = 20
-# bit_sequence = np.random.randint(0, 2, num_bits)
-text = "text!"
-# text = "?? text to tx !!"
+text = "text!123"
 bit_sequence, num_bits = text_to_bit_sequence(text)
+
+# print(bit_sequence)
+# plot_cross_correlation(x_, x_ )
+# plot_cross_correlation(x_, bit_sequence )
+# plot_autocorrelation(x_ )
+bit_sequence = np.concatenate((x_, bit_sequence)) # corr
+num_bits += x_.size
+
+# plot_cross_correlation(x_, bit_sequence )
+
+
+print(bit_sequence)
+
+# plot_autocorrelation(bit_sequence)
 
 qpsk_symbols = bits_to_qpsk(bit_sequence)
 qpsk_symbols_app = oversampling(qpsk_symbols, N)
 qpsk_symbols_convolve = convolve_with_one(qpsk_symbols_app, N)
 
-# qpsk_symbols_convolve *= 2**9
-
 real_part = (qpsk_symbols_convolve.real).astype(np.int16)
 imag_part = (qpsk_symbols_convolve.imag).astype(np.int16) 
+
+real_part = np.trim_zeros(real_part)
+imag_part = np.trim_zeros(imag_part)
 
 combined = np.empty(real_part.size + imag_part.size, dtype=np.int16)
 combined[0::2] = real_part
 combined[1::2] = imag_part
+
 
 print(combined)
 print(real_part.size)
@@ -71,33 +166,4 @@ with open('qpsk_signal.bin', 'wb') as f:
 
 # print(qpsk_symbols_convolve)
 
-# Визуализация
-plt.figure(figsize=(10, 5))
-
-# Действительная часть
-plt.subplot(1, 2, 1)
-plt.plot(qpsk_symbols_convolve.real, marker='o', linestyle='-', color='b')
-plt.title('Действительная часть')
-plt.xlabel('Индекс')
-plt.ylabel('Значение')
-plt.grid()
-
-# Мнимая часть
-plt.subplot(1, 2, 2)
-plt.plot(qpsk_symbols_convolve.imag, marker='o', linestyle='-', color='r')
-plt.title('Мнимая часть')
-plt.xlabel('Индекс')
-plt.ylabel('Значение')
-plt.grid()
-
-
-
-# plt.figure(figsize=(8, 8))
-# plt.scatter(qpsk_symbols.real, qpsk_symbols.imag, color='blue', label='QPSK Symbols')
-# plt.title('QPSK Constellation Diagram')
-# plt.xlabel('In-Phase (I)')
-# plt.ylabel('Quadrature (Q)')
-# plt.grid()
-# plt.axis('equal')
-# plt.legend()
-plt.show()
+plot_signal(real_part, imag_part)
