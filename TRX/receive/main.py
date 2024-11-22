@@ -4,6 +4,34 @@ import matplotlib.pyplot as plt
 
 from matplotlib.widgets import Slider
 
+def bit_sequence_to_text(bit_sequence):
+    # if len(bit_sequence) % 8 != 0:
+    #     raise ValueError("Длина битовой последовательности должна быть кратна 8.")
+    
+    text = []
+
+    for i in range(0, len(bit_sequence), 8):
+        byte = bit_sequence[i:i + 8]  # Берем 8 бит
+        ascii_value = int(''.join(str(bit) for bit in byte), 2) 
+        text.append(chr(ascii_value))
+    
+    return ''.join(text)
+
+def plot_eye_diagram(signal, sps, num_traces=100):
+    plt.figure(figsize=(12, 6))
+    plt.title('Eye Diagram')
+    plt.xlabel('Time (samples)')
+    plt.ylabel('Amplitude')
+    plt.grid(True)
+
+    for i in range(num_traces):
+        start_idx = i * sps
+        if start_idx + 2 * sps > len(signal):
+            break
+        plt.plot(range(2 * sps), signal[start_idx:start_idx + 2 * sps].real, color='blue', alpha=0.5)
+
+    plt.show()
+
 def plot_signal_interactive(signal, N):
     fig_real_imag, (ax_real, ax_imag) = plt.subplots(2, 1, figsize=(12, 8))
     plt.subplots_adjust(left=0.1, bottom=0.3)
@@ -63,6 +91,7 @@ def plot_signal_interactive(signal, N):
     update_graph(0)
 
     plt.show()
+    return slider.val
 
 def plot_signal(real_part, imag_part):
     time_indices = range(len(real_part))
@@ -101,7 +130,6 @@ def plot_signal(real_part, imag_part):
     plt.tight_layout()
     plt.show()
 
-
 def read_signal(filename):
     signal = []
     with open(filename, 'r') as file:
@@ -133,27 +161,104 @@ def convolve_with_filter(symbols, filter_coefficients):
 def extract_every_nth(signal, n, offset=0):
     return signal[offset::n]
 
-# read
+def qpsk_to_bits(symbols):
+    bits = []
+    for symbol in symbols:
+        real = np.real(symbol)
+        imag = np.imag(symbol)
+        if real > 0 and imag > 0:
+            bits.extend([0, 0])  # 1 + 1j
+        elif real < 0 and imag > 0:
+            bits.extend([0, 1])  # -1 + 1j
+        elif real < 0 and imag < 0:
+            bits.extend([1, 0])  # -1 - 1j
+        elif real > 0 and imag < 0:
+            bits.extend([1, 1])  # 1 - 1j
+    return np.array(bits)
+
+def rotate_constellation(signal, ref_points):
+    rotations = [np.exp(1j * theta) for theta in np.linspace(0, 2 * np.pi, 360, endpoint=False)]
+    
+    def alignment_cost(rotation):
+        rotated_signal = signal * rotation
+        closest_points = np.array([ref_points[np.argmin(np.abs(rotated_signal[i] - ref_points))] for i in range(len(rotated_signal))])
+        return np.sum(np.abs(rotated_signal - closest_points))
+    
+    best_rotation = min(rotations, key=alignment_cost)
+
+    return signal * best_rotation
+
+def costas_loop(signal, loop_gain, init_phase=0):
+    phase = init_phase
+    output_signal = []
+    for sample in signal:
+        rotated_sample = sample * np.exp(-1j * phase)
+        phase += loop_gain * np.angle(rotated_sample**4)
+        output_signal.append(rotated_sample)
+    return np.array(output_signal)
+
 parser = argparse.ArgumentParser()
 parser.add_argument('file_path', type=str)
 parser.add_argument('--max_lines', type=int, default=None)
 args = parser.parse_args()
 
-N = 10
+N = 10  # оверсемплинг
 signal = read_signal(args.file_path)
-# r = read_signal(args.file_path)
-# signal = r[1:300]
-# signal /= 2**9
-# plot_signal(signal.real, signal.imag)
 filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
 
+# выбор смещения
+n = plot_signal_interactive(signal, N)
+signal = extract_every_nth(signal, N, n)
+# signal = extract_every_nth(signal, N, 9)
+print(f"Selected offset: {n}")
 
-# beta = 0.75
-# num_taps = 128
-# filter_coefficients = raised_cosine_filter(beta, N, num_taps)
-# signal = convolve_with_filter(signal, filter_coefficients)
+# Нормализация
+signal /= np.mean(np.abs(signal))
 
-# signal = extract_every_nth(signal, N, 0) # нужно менять этот 0 в пределах от 0 до N
-# plot_signal(signal.real, signal.imag)
-plot_signal_interactive(signal, N)
+# Коррекция фазы
+loop_gain = 0.00001
+signal = costas_loop(signal, loop_gain)
+
+# Доварот
+ref_points = np.array([1+1j, 1-1j, -1+1j, -1-1j])  # Эталонное QPSK
+signal = rotate_constellation(signal, ref_points)
+
+plot_signal(signal.real, signal.imag)
+
+# Глазковая диаграмма
+plot_eye_diagram(signal, N, 100)
+
+bits = qpsk_to_bits(signal)
+bits = bits[11::]
+# bits = np.append(bits, 0)
+print(bits.size)
+text = bit_sequence_to_text(bits)
+print(text)
+
+with open('demodulated_bits.txt', 'w') as f:
+    for bit in bits:
+        f.write(str(bit))
+print("Demodulated bits:")
+print(bits)
+
+
+
+
+# # read
+# parser = argparse.ArgumentParser()
+# parser.add_argument('file_path', type=str)
+# parser.add_argument('--max_lines', type=int, default=None)
+# args = parser.parse_args()
+
+# N = 10
+# signal = read_signal(args.file_path)
+# filter_ones = np.ones(N)
+# signal = convolve_with_filter(signal, filter_ones)
+
+# # signal = extract_every_nth(signal, N, 0) 
+# # plot_signal(signal.real, signal.imag)
+# n = plot_signal_interactive(signal, N)
+# signal = extract_every_nth(signal, N, n)
+# print(n)
+# plot_eye_diagram(signal,N,100)

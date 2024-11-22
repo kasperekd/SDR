@@ -28,7 +28,6 @@ def plot_cross_correlation(x_fixed, x_data):
     plt.grid()
     plt.show()
 
-
 def plot_autocorrelation(data):
     n = len(data)
     mean = np.mean(data)
@@ -126,9 +125,9 @@ def convolve_with_one(symbols, n):
 x_ = np.array([1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0], dtype=np.int16)
 
 N = 10
-text = "text!123"
+text = "text!!!!"
 bit_sequence, num_bits = text_to_bit_sequence(text)
-
+print(num_bits)
 # print(bit_sequence)
 # plot_cross_correlation(x_, x_ )
 # plot_cross_correlation(x_, bit_sequence )
@@ -136,6 +135,10 @@ bit_sequence, num_bits = text_to_bit_sequence(text)
 bit_sequence = np.concatenate((x_, bit_sequence)) # corr
 num_bits += x_.size
 
+if len(bit_sequence) % 2 != 0:
+    bit_sequence = np.append(bit_sequence, 0) 
+    num_bits += 1
+print(num_bits)
 # plot_cross_correlation(x_, bit_sequence )
 
 
@@ -163,7 +166,9 @@ print(real_part.size)
 
 with open('qpsk_signal.bin', 'wb') as f:
     combined.tofile(f)
-
+with open('qpsk_signal.txt', 'w') as f:
+    for i in range(0, combined.size, 2):
+        f.write(f"{combined[i]}, {combined[i + 1]}\n")
 # print(qpsk_symbols_convolve)
 
 plot_signal(real_part, imag_part)

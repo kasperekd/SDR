@@ -158,8 +158,8 @@ int main(int argc, char *argv[]) {
         // tx_q[i] *= 512;
         // tx_i[i] *= 32;
         // tx_q[i] *= 32;
-        tx_i[i] *= 2048;
-        tx_q[i] *= 2048;
+        tx_i[i] *= config.multiplier;
+        tx_q[i] *= config.multiplier;
         // tx_i[i] = 31999;
         // tx_q[i] = 31999;
     }
@@ -188,6 +188,7 @@ int main(int argc, char *argv[]) {
     free(tx_q);
     outfile.close();
     cleanup_adalm_pluto(devices);
+    free_config(config);
 
     return 0;
 }

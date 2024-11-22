@@ -113,6 +113,7 @@ bool load_config(const std::string& file_path, Config& config) {
                 config.txcfg.lo_hz = parse_frequency(value);
             } else if (key == "tx_rf_port") {
                 // config.txcfg.rfport = value.c_str();
+                free((void*)config.txcfg.rfport);
                 config.txcfg.rfport = strdup(value.c_str());
             } else if (key == "rx_bandwidth_hz") {
                 config.rxcfg.bw_hz = parse_frequency(value);
@@ -122,11 +123,29 @@ bool load_config(const std::string& file_path, Config& config) {
                 config.rxcfg.lo_hz = parse_frequency(value);
             } else if (key == "rx_rf_port") {
                 // config.rxcfg.rfport = value.c_str();
+                free((void*)config.rxcfg.rfport);
                 config.rxcfg.rfport = strdup(value.c_str());
             } else if (key == "buffer_size") {
                 config.buffer_size = std::stoul(value);
             } else if (key == "rx_gain_mode") {
                 config.gain_mode = value;
+            } else if (key == "multiplier") {
+                try {
+                    int value_ = std::stoi(value);
+                    if (value_ < INT16_MIN || value_ > INT16_MAX) {
+                        throw std::out_of_range(
+                            "Value is out of range for int16_t");
+                    }
+                    config.multiplier = static_cast<int16_t>(value_);
+                } catch (const std::invalid_argument& e) {
+                    std::cerr << "Invalid argument for multiplier: " << e.what()
+                              << std::endl;
+                    return false;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Out of range for multiplier: " << e.what()
+                              << std::endl;
+                    return false;
+                }
             } else {
                 std::cerr << "Unknown config key: " << key << std::endl;
                 return false;
@@ -145,6 +164,10 @@ bool load_config(const std::string& file_path, Config& config) {
                   << std::endl;
         return false;
     }
-
     return true;
+}
+
+void free_config(Config& config) {
+    free((void*)config.txcfg.rfport);
+    free((void*)config.rxcfg.rfport);
 }
