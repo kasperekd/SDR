@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import firwin, lfilter
+from scipy.signal import max_len_seq
 
 def plot_cross_correlation(x_fixed, x_data):
     # Длина фиксированной последовательности
@@ -139,24 +139,52 @@ def convolve_with_one(symbols, n):
     result = np.convolve(symbols, filter_ones, mode='full')
     return result
 
-N = 10
-text = "text!!!!"
+def barker_sequence():
+    return np.array([1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1], dtype=np.int8)
+    # return np.array([1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0], dtype=np.int8)
+
+def generate_gold_sequence(length=31):
+    seq1, _ = max_len_seq(5)
+    seq2 = np.roll(seq1, 3)
+    gold_sequence = np.bitwise_xor(seq1, seq2[:length])
+    return gold_sequence.astype(np.int8)
+
+def generate_m_sequence(order=5):
+    seq, _ = max_len_seq(order)
+    return seq.astype(np.int8)
+
+def create_packet(payload_bits, sync_word=None, header_length=0):
+    if sync_word is None:
+        sync_word = barker_sequence()
+    payload_length = len(payload_bits)
+    # header = np.array([int(b) for b in f"{payload_length:0{header_length}b}"], dtype=np.int8)
+    # packet = np.concatenate((sync_word, header, payload_bits))
+    packet = np.concatenate((sync_word, payload_bits))
+    return packet, sync_word
+
+# Передача
+N = 10  # Оверсемплинг
+text = "This is a text ? Yes !!"
 bit_sequence, num_bits = text_to_bit_sequence(text)
-print(num_bits)
-
-if len(bit_sequence) % 2 != 0:
-    bit_sequence = np.append(bit_sequence, 0) 
-    num_bits += 1
-
-print(num_bits)
 print(bit_sequence)
 
-qpsk_symbols = bits_to_qpsk(bit_sequence)
+# Создаем пакет
+payload = bit_sequence
+packet, sync_word = create_packet(payload)
+
+# выравнивание
+if len(packet) % 2 != 0:
+    packet = np.append(packet, 0)
+    num_bits += 1
+
+print(len(packet))
+# Преобразуем в 
+qpsk_symbols = bits_to_qpsk(packet)
 qpsk_symbols_app = oversampling(qpsk_symbols, N)
 qpsk_symbols_convolve = convolve_with_one(qpsk_symbols_app, N)
 
 real_part = (qpsk_symbols_convolve.real).astype(np.int16)
-imag_part = (qpsk_symbols_convolve.imag).astype(np.int16) 
+imag_part = (qpsk_symbols_convolve.imag).astype(np.int16)
 
 real_part = np.trim_zeros(real_part)
 imag_part = np.trim_zeros(imag_part)
@@ -165,13 +193,15 @@ combined = np.empty(real_part.size + imag_part.size, dtype=np.int16)
 combined[0::2] = real_part
 combined[1::2] = imag_part
 
-print(combined)
-print(real_part.size)
-
+# Сохранение
 with open('qpsk_signal.bin', 'wb') as f:
     combined.tofile(f)
+
 with open('qpsk_signal.txt', 'w') as f:
     for i in range(0, combined.size, 2):
         f.write(f"{combined[i]}, {combined[i + 1]}\n")
+
+with open('sync_word.txt', 'w') as f:
+    f.write("".join(map(str, sync_word)))
 
 plot_signal(real_part, imag_part)

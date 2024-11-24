@@ -1,3 +1,7 @@
+from scipy.signal import correlate
+import matplotlib.pyplot as plt
+import argparse
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -197,58 +201,92 @@ def costas_loop(signal, loop_gain, init_phase=0):
         output_signal.append(rotated_sample)
     return np.array(output_signal)
 
+def barker_sequence():
+    return np.array([1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1], dtype=np.int8)
+    # return np.array([1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0], dtype=np.int8)
+
+def find_sync_word(signal, sync_word, threshold=0.9):
+    sync_word_mapped = 2 * sync_word - 1  # [0, 1] -> [-1, 1]
+    signal_mapped = 2 * signal - 1        # [0, 1] -> [-1, 1]
+    # print(signal)
+    correlation = correlate(signal_mapped, sync_word_mapped, mode='valid')
+    norm_correlation = correlation / (len(sync_word) * np.mean(np.abs(sync_word_mapped)))
+
+    max_corr = np.max(norm_correlation)
+    max_index = np.argmax(norm_correlation)
+    # print(max_corr)
+    if max_corr > threshold:
+        # print(max_corr)
+        # print(sync_word_mapped)
+        # print(signal_mapped)
+        return max_index
+    return -1
+
+def sliding_window(signal, sync_word, data_length, threshold=0.8):
+    sync_word_len = len(sync_word)
+    signal_len = len(signal)
+    packets = []
+    index = 0
+    # print(signal)
+    while index <= signal_len - sync_word_len:
+        sync_index = find_sync_word(signal[index:(sync_word_len+index)], sync_word, threshold)
+
+        if sync_index != -1:
+            print(f"Sync word found at index {index + sync_index}")
+
+            data_start = index + sync_index + sync_word_len
+            data_end = data_start + data_length - sync_word_len
+            # print(data_start)
+            # print(data_end)
+            # print(signal_len)
+            if data_end > signal_len:
+                # print(data_end)
+                # print(signal_len)
+                print("Incomplete data detected, stopping extraction.")
+                break
+            
+            data_bits = signal[data_start:data_end]
+            packets.append(data_bits)
+            # print(data_bits)
+            index = data_end
+        else:
+            index += 1
+
+    return packets
+
+# Приём
 parser = argparse.ArgumentParser()
 parser.add_argument('file_path', type=str)
-parser.add_argument('--max_lines', type=int, default=None)
 args = parser.parse_args()
 
-N = 10  # оверсемплинг
+N = 10
+
 signal = read_signal(args.file_path)
 filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
-
-# выбор смещения
-# n = plot_signal_interactive(signal, N)
-# signal = extract_every_nth(signal, N, )
-signal = extract_every_nth(signal, N, 9)
-
-# Нормализация
-signal /= np.mean(np.abs(signal))
-
-plot_signal(signal.real, signal.imag)
-
-# Глазковая диаграмма
-plot_eye_diagram(signal, N, 100)
-
-bits = qpsk_to_bits(signal)
-# bits = np.append(bits, 0)
-print(bits.size)
-text = bit_sequence_to_text(bits)
-print(text)
-
-with open('demodulated_bits.txt', 'w') as f:
-    for bit in bits:
-        f.write(str(bit))
-print("Demodulated bits:")
-print(bits)
-
-
-
-
-# # read
-# parser = argparse.ArgumentParser()
-# parser.add_argument('file_path', type=str)
-# parser.add_argument('--max_lines', type=int, default=None)
-# args = parser.parse_args()
-
-# N = 10
-# signal = read_signal(args.file_path)
-# filter_ones = np.ones(N)
-# signal = convolve_with_filter(signal, filter_ones)
-
-# # signal = extract_every_nth(signal, N, 0) 
-# # plot_signal(signal.real, signal.imag)
 # n = plot_signal_interactive(signal, N)
 # signal = extract_every_nth(signal, N, n)
-# print(n)
-# plot_eye_diagram(signal,N,100)
+signal = extract_every_nth(signal, N, N-1)
+signal /= np.mean(np.abs(signal))
+
+# plot_signal(signal.real, signal.imag)
+
+# Декод
+sync_word = barker_sequence()
+bits = qpsk_to_bits(signal)
+
+data_length = 198 # Максимальный размер
+
+packets = sliding_window(bits, sync_word, data_length, threshold=0.9)
+print(f"Found {len(packets)} packet(s) in the signal.")
+
+# payload_bits = extract_packet(bits, sync_word)
+
+for i, payload_bits in enumerate(packets, start=1):
+    text = bit_sequence_to_text(payload_bits)
+    # print(payload_bits)
+    print(f"Packet {i}: {text}")
+
+    # with open(f'demodulated_packet_{i}.txt', 'w') as f:
+    #     for bit in payload_bits:
+    #         f.write(str(bit))

@@ -7,3 +7,4 @@ data
 !lab_10/data
 !TRX/data
 *.bin
+demodulated_packet_*
