@@ -111,26 +111,51 @@ def text_to_bit_sequence(text):
     bit_sequence_array = np.array(bit_sequence)
     return bit_sequence_array, len(bit_sequence_array)
 
+# def bits_to_qpsk(bits):
+#     symbols = []
+#     for i in range(0, len(bits), 2):
+#         if i + 1 < len(bits):
+#             if bits[i] == 0 and bits[i + 1] == 0:
+#                 symbols.append(1 + 1j)  # 00
+#             elif bits[i] == 0 and bits[i + 1] == 1:
+#                 symbols.append(-1 + 1j)  # 01
+#             elif bits[i] == 1 and bits[i + 1] == 0:
+#                 symbols.append(-1 - 1j)  # 10
+#             elif bits[i] == 1 and bits[i + 1] == 1:
+#                 symbols.append(1 - 1j)  # 11
+#     return np.array(symbols)
+
 def bits_to_qpsk(bits):
-    symbols = []
-    for i in range(0, len(bits), 2):
-        if i + 1 < len(bits):
-            if bits[i] == 0 and bits[i + 1] == 0:
-                symbols.append(1 + 1j)  # 00
-            elif bits[i] == 0 and bits[i + 1] == 1:
-                symbols.append(-1 + 1j)  # 01
-            elif bits[i] == 1 and bits[i + 1] == 0:
-                symbols.append(-1 - 1j)  # 10
-            elif bits[i] == 1 and bits[i + 1] == 1:
-                symbols.append(1 - 1j)  # 11
-    return np.array(symbols)
+    bits = bits.reshape((-1, 2))
+    mapping = {
+        (0, 0): 1 + 1j,
+        (0, 1): -1 + 1j,
+        (1, 0): -1 - 1j,
+        (1, 1): 1 - 1j,
+    }
+    return np.array([mapping[tuple(b)] for b in bits], dtype=complex)
+
+def bits_to_bpsk(bits):
+    # BPSK: 0 -> -1, 1 -> +1
+    return 2 * bits - 1
+
+# def oversampling(symbols, n):
+#     zeros = np.array([0 + 0j] * (n-1), dtype=np.complex128)
+#     new_symbols = []
+#     for symbol in symbols:
+#         new_symbols.append(symbol)
+#         new_symbols.extend(zeros)
+    
+#     return np.array(new_symbols, dtype=np.complex128)
 
 def oversampling(symbols, n):
-    zeros = np.array([0 + 0j] * (n-1), dtype=np.complex128)
+    zeros = np.array([0 + 0j] * (n - 1), dtype=np.complex128)
     new_symbols = []
-    for symbol in symbols:
+    
+    for i, symbol in enumerate(symbols):
         new_symbols.append(symbol)
-        new_symbols.extend(zeros)
+        if i < len(symbols) - 1: 
+            new_symbols.extend(zeros)
     
     return np.array(new_symbols, dtype=np.complex128)
 
@@ -140,8 +165,14 @@ def convolve_with_one(symbols, n):
     return result
 
 def barker_sequence():
+    # return np.array([1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1], dtype=np.int8)
     return np.array([1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1], dtype=np.int8)
     # return np.array([1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0], dtype=np.int8)
+
+def bits_to_bpsk_complex(bits):
+    # real_part = 2 * bits - 1 
+    return np.array((2 * bits - 1) + 0j)
+    # return real_part + 1j * real_part
 
 def generate_gold_sequence(length=31):
     seq1, _ = max_len_seq(5)
@@ -163,32 +194,43 @@ def create_packet(payload_bits, sync_word=None, header_length=0):
     return packet, sync_word
 
 # Передача
-N = 10  # Оверсемплинг
-text = "This is a text ? Yes !!"
+N = 10 # Оверсемплинг
+# text = "txt"
+text = "This is a text ? Yes !"
 bit_sequence, num_bits = text_to_bit_sequence(text)
 print(bit_sequence)
 
 # Создаем пакет
-payload = bit_sequence
-packet, sync_word = create_packet(payload)
+# payload = bit_sequence
+# packet, sync_word = create_packet(payload)
 
+
+packet = bit_sequence
 # выравнивание
-if len(packet) % 2 != 0:
-    packet = np.append(packet, 0)
+if len(bit_sequence) % 2 != 0:
+    packet = np.append(bit_sequence, 0)
     num_bits += 1
 
-print(len(packet))
+print(f"data len: {len(packet)/2}" )
 # Преобразуем в 
 qpsk_symbols = bits_to_qpsk(packet)
-qpsk_symbols_app = oversampling(qpsk_symbols, N)
-qpsk_symbols_convolve = convolve_with_one(qpsk_symbols_app, N)
+np.trim_zeros(qpsk_symbols)
+# np.trim_zeros(qpsk_symbols.imag)
+# Добавить синхр.
+sync = bits_to_bpsk_complex(barker_sequence())
+combined_signal = np.concatenate((sync, qpsk_symbols))
+# combined_signal = qpsk_symbols
+print(f"with sequence len: {len(combined_signal)}")
+print(combined_signal)
+combined_signal_app = oversampling(combined_signal, N)
+combined_symbols_convolve = convolve_with_one(combined_signal_app, N)
 
-real_part = (qpsk_symbols_convolve.real).astype(np.int16)
-imag_part = (qpsk_symbols_convolve.imag).astype(np.int16)
+real_part = (combined_symbols_convolve.real).astype(np.int16)
+imag_part = (combined_symbols_convolve.imag).astype(np.int16)
 
-real_part = np.trim_zeros(real_part)
-imag_part = np.trim_zeros(imag_part)
-
+# real_part = np.trim_zeros(real_part)
+# imag_part = np.trim_zeros(imag_part)
+# plot_signal(combined_symbols_convolve.real, combined_symbols_convolve.imag)
 combined = np.empty(real_part.size + imag_part.size, dtype=np.int16)
 combined[0::2] = real_part
 combined[1::2] = imag_part
@@ -201,7 +243,6 @@ with open('qpsk_signal.txt', 'w') as f:
     for i in range(0, combined.size, 2):
         f.write(f"{combined[i]}, {combined[i + 1]}\n")
 
-with open('sync_word.txt', 'w') as f:
-    f.write("".join(map(str, sync_word)))
-
+# with open('sync_word.txt', 'w') as f:
+    # f.write("".join(map(str, sync_word)))
 plot_signal(real_part, imag_part)
