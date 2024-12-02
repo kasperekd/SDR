@@ -34,6 +34,7 @@ struct PlutoDevices {
     struct iio_stream* rxstream;
     struct iio_stream* txstream;
     size_t rx_sample_sz, tx_sample_sz;
+    size_t buffer_size;
 };
 
 bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,

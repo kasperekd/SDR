@@ -234,14 +234,13 @@ def find_sync_word(signal, sync_word, threshold=0.8):
 
     max_corr = np.max(norm_correlation)
     max_index = np.argmax(norm_correlation)
-    print(max_corr)
+    # print(max_corr)
     # print(max_index)
     if max_corr > threshold:
         return max_index
     return -1
 
 def sliding_window(signal, sync_word, data_length, threshold=0.8):
-    """Скользящее окно для поиска пакетов."""
     sync_word_len = len(sync_word)
     signal_len = len(signal)
     packets = []
@@ -256,9 +255,9 @@ def sliding_window(signal, sync_word, data_length, threshold=0.8):
             # Найден синхроворд, извлекаем данные
             data_start = index + sync_index + sync_word_len
             data_end = data_start + data_length
-            print(data_start)
-            print(data_end)
-            print(signal_len)
+            # print(data_start)
+            # print(data_end)
+            # print(signal_len)
             if data_end > signal_len:
                 print("Incomplete data detected, stopping extraction.")
                 break
@@ -301,6 +300,7 @@ packets = sliding_window(signal, sync_word, data_length, threshold=0.7)
 print(f"Found {len(packets)} packet(s) in the signal.")
 for i, qpsk_symbols in enumerate(packets, start=1):
     data_bits = qpsk_to_bits(qpsk_symbols)
+    # plot_signal(qpsk_symbols.real, qpsk_symbols.imag)
     # print(data_bits)
     text = bit_sequence_to_text(data_bits)
     print(f"Packet {i}: {text}")

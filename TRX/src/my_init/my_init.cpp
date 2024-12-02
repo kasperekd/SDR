@@ -104,6 +104,7 @@ bool init_adalm_pluto(const std::string& ip, const StreamConfig& txcfg,
             iio_device_create_buffer(devices.rx_dev, 0, devices.rxmask);
         IIO_ENSURE(devices.txbuf != nullptr, "Failed to create TX buffer");
         IIO_ENSURE(devices.rxbuf != nullptr, "Failed to create RX buffer");
+        devices.buffer_size = buffer_size;
 
         std::cout << "* Creating streams\n";
         devices.rxstream =
