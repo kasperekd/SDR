@@ -237,6 +237,7 @@ def find_sync_word(signal, sync_word, threshold=0.8):
     # print(max_corr)
     # print(max_index)
     if max_corr > threshold:
+        print(max_corr) 
         return max_index
     return -1
 
@@ -271,35 +272,150 @@ def sliding_window(signal, sync_word, data_length, threshold=0.8):
 
     return packets
 
+# def symbol_synchronization(I, Q, Ns, Nsp, BnTs=0.01, damping_factor=1, detector_gain=2.7):
+#     p1, p2 = 0, 0
+#     r = 0  
+#     offsets = [] 
+#     Nsps = int(1 / BnTs) 
+
+#     theta = (BnTs / Nsps) / (damping_factor + 0.25 / damping_factor)
+#     d = (1 + 2 * damping_factor * theta + theta**2) * detector_gain
+#     K1 = (-4 * damping_factor * theta) / d
+#     K2 = (-4 * theta**2) / d
+
+#     print(K1)
+#     print(K2)
+
+#     for n in range(0, len(I) - Ns, Ns):
+#         if n + Nsp + Ns >= len(I) or n + Ns >= len(I):
+#             break
+
+#         # TED
+#         e = (
+#             (I[n + Nsp + Ns] - I[n + Ns]) * I[n + Nsp // 2 + Ns] +
+#             (Q[n + Nsp + Ns] - Q[n + Ns]) * Q[n + Nsp // 2 + Ns]
+#         )
+
+#         # Фильтр
+#         p1 = e * K1
+#         p2 += p1 + e * K2
+#         if p2 > 1:
+#             while p2 > 1:
+#                 p2 -= 1
+
+#         r_prev = r
+#         r = (r + 1 + p2 * Nsps) % Ns
+
+#         if r < r_prev:
+#             offsets.append(round((p2 * Nsps)))
+#         else:
+#             offsets.append(0)
+#     print(offsets)
+#     return offsets
+
+
+def symbol_synchronization(I, Q, Ns, Nsp, BnTs=0.01, damping_factor = 1, detector_gain = 2.7):
+    symbols = np.empty(len(I), dtype=np.complex128) 
+
+    p1, p2 = 0, 0 
+    r = 0 
+    offset = 0
+    Nsps = int(1 / BnTs) 
+    offsets = [] 
+
+    theta = (BnTs/Nsps)/(damping_factor+0.25/damping_factor)
+    d = (1 + 2 * damping_factor * theta + theta**2) * detector_gain
+    K1 = (-4*damping_factor*theta)/d
+    K2 = (-4*theta**2)/d
+
+    print(K1)
+    print(K2)
+
+    # for n in range(0, len(I) - Ns, Ns):
+    for n in range(Ns, len(I)-Ns):
+        if n + Nsp + Ns >= len(I) or n + Ns >= len(I):
+            break
+
+        # TED
+        e = (
+            (I[n + Nsp + Ns] - I[n + Ns]) * I[n + Nsp // 2 + Ns] +
+            (Q[n + Nsp + Ns] - Q[n + Ns]) * Q[n + Nsp // 2 + Ns]
+        )
+        # e /= 1000
+        # фильтр
+        p1 = e * K1
+        p2 = p2 + p1 + e * K2
+        print("--- n:",n, "---")
+        print("e", e)
+        print("p1", p1)
+        print("p2", p2)
+        if p2 > 1:
+            while p2 > 1:
+                print(p2)
+                p2 -= 1
+        offset = round(p2 * (Nsps))
+        # offset = 9
+        offsets.append(offset)
+
+        print("r",r)
+        r_prev = r
+        r = (r_prev + offset*n + 1) % Ns
+        # r = (r_prev + 1 + offset) % Ns
+        # r += (offset + p2 + e) % Ns
+        if r < r_prev:
+            # r = 0
+            # r_prev = 0
+            # symbols[offset] = I[n] + 1j * Q[n]
+            n += Ns
+            # offset = 0
+
+        
+    print(offsets)
+    # return symbols
+    return offsets
+
+def extract_symbols(I, Q, offsets, Ns):
+    symbols = np.empty(len(offsets), dtype=np.complex128) 
+    for n, offset in enumerate(offsets):
+        index = n * Ns + offset
+        if index < len(I) and index < len(Q):
+            symbols[n] = I[index] + 1j * Q[index]
+            # print(index)
+    return symbols
+
 # Приём
 parser = argparse.ArgumentParser()
 parser.add_argument('file_path', type=str)
 args = parser.parse_args()
 
 N = 10
-
-# Чтение и фильтрация сигнала
 signal = read_signal(args.file_path)
+
+# plot_signal(synchronized_signal.real, synchronized_signal.imag)
+
 filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
-# n = plot_signal_interactive(signal, N)
-# signal = extract_every_nth(signal, N, n)
-signal = extract_every_nth(signal, N, N - 1)
-# signal /= np.mean(np.abs(signal))
+# plot_signal(signal.real, signal.imag)
+# signal = extract_every_nth(signal, N, N - 1)
+offsets = symbol_synchronization(signal.real, signal.imag, N, int(N / 2), 0.1, 1.0, 2.7)
+signal = extract_symbols(signal.real, signal.imag, offsets, N)
+# signal = symbol_synchronization(signal.real, signal.imag, N, int(N / 2), 0.1, 1, 2.7)
+# signal = extract_symbols(signal.real, signal.imag, offsets, N)
+# print(symbols)
 signal /= N
-# print(np.mean(np.abs(signal)))
-
+plot_signal(signal.real, signal.imag)
+plot_eye_diagram(signal, 1)
 sync_word = barker_sequence()
-# data_length = 184 # Максимальный размер В БИТАХ
 data_length = 88 # Максимальный размер В СИМВОЛАХ IQ
 
 # Поиск пакетов
-packets = sliding_window(signal, sync_word, data_length, threshold=0.7)
+packets = sliding_window(signal, sync_word, data_length, threshold=0.1)
 
 # Обработка пакетов
 print(f"Found {len(packets)} packet(s) in the signal.")
 for i, qpsk_symbols in enumerate(packets, start=1):
     data_bits = qpsk_to_bits(qpsk_symbols)
+    # plot_eye_diagram(qpsk_symbols, 1)
     # plot_signal(qpsk_symbols.real, qpsk_symbols.imag)
     # print(data_bits)
     text = bit_sequence_to_text(data_bits)

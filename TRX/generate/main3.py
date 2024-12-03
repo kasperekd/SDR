@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import max_len_seq
@@ -193,6 +194,35 @@ def create_packet(payload_bits, sync_word=None, header_length=0):
     packet = np.concatenate((sync_word, payload_bits))
     return packet, sync_word
 
+
+def сhannel_simulation(signal, noise_level, amplitude_variation, phase_variation):
+    noise_length = len(signal) * 2
+    white_noise_real = np.random.normal(0.0, noise_level, noise_length)
+    white_noise_imag = np.random.normal(0.0, noise_level, noise_length)
+
+    white_noise_real *= (noise_level)
+    white_noise_imag *= (noise_level)
+
+    # print((max(white_noise_real)))
+
+    mid_index = len(white_noise_real) // 2
+    start_index = mid_index - len(signal) // 2
+    white_signal = np.zeros(noise_length, dtype=np.complex128)
+
+    white_signal.real = white_noise_real
+    white_signal.imag = white_noise_imag
+
+    white_signal[start_index:start_index + len(signal)].real += signal.real
+    white_signal[start_index:start_index + len(signal)].imag += signal.imag
+
+    amplitude_factor = np.random.uniform(1 - amplitude_variation, 1 + amplitude_variation)
+    white_signal *= amplitude_factor
+
+    phase_shift = np.random.uniform(-phase_variation, phase_variation)
+    white_signal *= np.exp(1j * phase_shift)
+
+    return white_signal
+
 # Передача
 N = 10 # Оверсемплинг
 # text = "txt"
@@ -218,15 +248,22 @@ np.trim_zeros(qpsk_symbols)
 # np.trim_zeros(qpsk_symbols.imag)
 # Добавить синхр.
 sync = bits_to_bpsk_complex(barker_sequence())
-combined_signal = np.concatenate((sync, qpsk_symbols))
-# combined_signal = qpsk_symbols
+# combined_signal = np.concatenate((sync, qpsk_symbols))
+combined_signal = qpsk_symbols
 print(f"with sequence len: {len(combined_signal)}")
 print(combined_signal)
 combined_signal_app = oversampling(combined_signal, N)
 combined_symbols_convolve = convolve_with_one(combined_signal_app, N)
 
-real_part = (combined_symbols_convolve.real).astype(np.int16)
-imag_part = (combined_symbols_convolve.imag).astype(np.int16)
+# combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.0 , 0, 0)
+combined_symbols_convolve = combined_symbols_convolve
+# combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.0, 0, 0)
+
+# real_part = (noisy_signal.real).astype(np.int16)
+# imag_part = (noisy_signal.imag).astype(np.int16)
+real_part = (combined_symbols_convolve.real)
+imag_part = (combined_symbols_convolve.imag)
+
 
 # real_part = np.trim_zeros(real_part)
 # imag_part = np.trim_zeros(imag_part)
@@ -236,8 +273,8 @@ combined[0::2] = real_part
 combined[1::2] = imag_part
 
 # Сохранение
-with open('qpsk_signal.bin', 'wb') as f:
-    combined.tofile(f)
+# with open('qpsk_signal.bin', 'wb') as f:
+#     combined.tofile(f)
 
 with open('qpsk_signal.txt', 'w') as f:
     for i in range(0, combined.size, 2):
