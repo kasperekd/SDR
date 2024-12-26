@@ -264,9 +264,9 @@ N = 10
 signal = read_signal(args.file_path)
 filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
-# n = plot_signal_interactive(signal, N)
-# signal = extract_every_nth(signal, N, n)
-signal = extract_every_nth(signal, N, N-1)
+n = plot_signal_interactive(signal, N)
+signal = extract_every_nth(signal, N, n)
+# signal = extract_every_nth(signal, N, N-1)
 signal /= np.mean(np.abs(signal))
 
 # plot_signal(signal.real, signal.imag)

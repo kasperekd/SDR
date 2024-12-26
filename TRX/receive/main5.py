@@ -237,7 +237,7 @@ def find_sync_word(signal, sync_word, threshold=0.8):
     # print(max_corr)
     # print(max_index)
     if max_corr > threshold:
-        print(max_corr) 
+        # print(max_corr) 
         return max_index
     return -1
 
@@ -328,8 +328,8 @@ def symbol_synchronization(I, Q, Ns, Nsp, BnTs=0.01, damping_factor = 1, detecto
     K1 = (-4*damping_factor*theta)/d
     K2 = (-4*theta**2)/d
 
-    print(K1)
-    print(K2)
+    # print(K1)
+    # print(K2)
 
     # for n in range(0, len(I) - Ns, Ns):
     for n in range(Ns, len(I)-Ns):
@@ -345,19 +345,19 @@ def symbol_synchronization(I, Q, Ns, Nsp, BnTs=0.01, damping_factor = 1, detecto
         # фильтр
         p1 = e * K1
         p2 = p2 + p1 + e * K2
-        print("--- n:",n, "---")
+        # print("--- n:",n, "---")
         print("e", e)
-        print("p1", p1)
-        print("p2", p2)
+        # print("p1", p1)
+        # print("p2", p2)
         if p2 > 1:
             while p2 > 1:
-                print(p2)
+                # print(p2)
                 p2 -= 1
         offset = round(p2 * (Nsps))
         # offset = 9
         offsets.append(offset)
 
-        print("r",r)
+        # print("r",r)
         r_prev = r
         r = (r_prev + offset*n + 1) % Ns
         # r = (r_prev + 1 + offset) % Ns
@@ -397,14 +397,14 @@ filter_ones = np.ones(N)
 signal = convolve_with_filter(signal, filter_ones)
 # plot_signal(signal.real, signal.imag)
 # signal = extract_every_nth(signal, N, N - 1)
-offsets = symbol_synchronization(signal.real, signal.imag, N, int(N / 2), 0.1, 1.0, 2.7)
-signal = extract_symbols(signal.real, signal.imag, offsets, N)
+# offsets = symbol_synchronization(signal.real, signal.imag, N, int(N / 2), 0.01, 1.0, 2.7)
+# signal = extract_symbols(signal.real, signal.imag, offsets, N)
 # signal = symbol_synchronization(signal.real, signal.imag, N, int(N / 2), 0.1, 1, 2.7)
 # signal = extract_symbols(signal.real, signal.imag, offsets, N)
 # print(symbols)
 signal /= N
 plot_signal(signal.real, signal.imag)
-plot_eye_diagram(signal, 1)
+# plot_eye_diagram(signal, 1)
 sync_word = barker_sequence()
 data_length = 88 # Максимальный размер В СИМВОЛАХ IQ
 

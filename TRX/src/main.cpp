@@ -13,7 +13,7 @@
 
 
 // #define CHRONO
-// #define MEMCPY
+#define MEMCPY
 
 
 // DEFAULT PATHs
@@ -142,7 +142,7 @@ void receive(PlutoDevices &devices, std::ofstream &outfile) {
     std::cout << "RX is run" << std::endl;
     const struct iio_block *rxblock;
     
-    #ifdef MEMCPY
+    #ifdef MEMCPY_
         size_t iterations = 0;
         #ifdef CHRONO
             auto start_rx = std::chrono::high_resolution_clock::now();

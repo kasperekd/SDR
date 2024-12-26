@@ -129,10 +129,10 @@ def text_to_bit_sequence(text):
 def bits_to_qpsk(bits):
     bits = bits.reshape((-1, 2))
     mapping = {
-        (0, 0): 1 + 1j,
+        (0, 0): -1 + -1j,
         (0, 1): -1 + 1j,
-        (1, 0): -1 - 1j,
-        (1, 1): 1 - 1j,
+        (1, 0): 1 - 1j,
+        (1, 1): 1 + 1j,
     }
     return np.array([mapping[tuple(b)] for b in bits], dtype=complex)
 
@@ -248,8 +248,8 @@ np.trim_zeros(qpsk_symbols)
 # np.trim_zeros(qpsk_symbols.imag)
 # Добавить синхр.
 sync = bits_to_bpsk_complex(barker_sequence())
-# combined_signal = np.concatenate((sync, qpsk_symbols))
-combined_signal = qpsk_symbols
+combined_signal = np.concatenate((sync, qpsk_symbols))
+# combined_signal = qpsk_symbols
 print(f"with sequence len: {len(combined_signal)}")
 print(combined_signal)
 combined_signal_app = oversampling(combined_signal, N)
@@ -257,7 +257,7 @@ combined_symbols_convolve = convolve_with_one(combined_signal_app, N)
 
 # combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.0 , 0, 0)
 combined_symbols_convolve = combined_symbols_convolve
-# combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.0, 0, 0)
+# combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.2, 0, np.pi/16)
 
 # real_part = (noisy_signal.real).astype(np.int16)
 # imag_part = (noisy_signal.imag).astype(np.int16)
@@ -273,8 +273,8 @@ combined[0::2] = real_part
 combined[1::2] = imag_part
 
 # Сохранение
-# with open('qpsk_signal.bin', 'wb') as f:
-#     combined.tofile(f)
+with open('qpsk_signal.bin', 'wb') as f:
+    combined.tofile(f)
 
 with open('qpsk_signal.txt', 'w') as f:
     for i in range(0, combined.size, 2):
