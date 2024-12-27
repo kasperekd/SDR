@@ -256,8 +256,8 @@ combined_signal_app = oversampling(combined_signal, N)
 combined_symbols_convolve = convolve_with_one(combined_signal_app, N)
 
 # combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.0 , 0, 0)
-combined_symbols_convolve = combined_symbols_convolve
-# combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.2, 0, np.pi/16)
+# combined_symbols_convolve = combined_symbols_convolve
+combined_symbols_convolve = сhannel_simulation(combined_symbols_convolve, 0.35, 0.5, np.pi/8)
 
 # real_part = (noisy_signal.real).astype(np.int16)
 # imag_part = (noisy_signal.imag).astype(np.int16)

@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 
-# Параметры сигнала
 T = 2.0  # Период
 tau = 1.0  # Длительность прямоугольного сигнала
 
@@ -58,7 +57,6 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 
-# Синтез временного колебания
 t = np.linspace(0, 4 * T, 1000)
 original_signal = [rectangular_signal(ti) for ti in t]
 reconstructed_signals = [reconstructed_signal(t, n, a_coeffs, b_coeffs) for n in [3, 5, 7]]
